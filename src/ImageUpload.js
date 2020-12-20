@@ -3,6 +3,7 @@ import React, { useState } from "react";
 import { storage, db } from "./firebase";
 import firebase from "firebase";
 import "./ImageUpload.css";
+import axios from "./axios";
 
 function ImageUpload({ username }) {
   const [image, setImage] = useState(null);
@@ -39,6 +40,12 @@ function ImageUpload({ username }) {
           .child(image.name)
           .getDownloadURL()
           .then((url) => {
+            axios.post("/upload", {
+              caption: caption,
+              user: username,
+              image: url,
+            });
+
             // post image inside db
             db.collection("posts").add({
               timestamp: firebase.firestore.FieldValue.serverTimestamp(),
@@ -65,7 +72,9 @@ function ImageUpload({ username }) {
         value={caption}
       />
       <input type="file" onChange={handleChange} />
-      <Button disabled={!image} onClick={handleUpload}>Upload</Button>
+      <Button disabled={!image} onClick={handleUpload}>
+        Upload
+      </Button>
     </div>
   );
 }

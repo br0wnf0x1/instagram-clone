@@ -1,12 +1,14 @@
 import { useEffect, useState } from "react";
 import "./App.css";
 import Post from "./Post";
-import { db, auth } from "./firebase";
+import { auth } from "./firebase";
 import { makeStyles } from "@material-ui/core/styles";
 import Modal from "@material-ui/core/Modal";
 import { Button, Input } from "@material-ui/core";
 import ImageUpload from "./ImageUpload";
 import InstagramEmbed from "react-instagram-embed";
+import axios from "./axios";
+import Pusher from "pusher-js";
 
 function getModalStyle() {
   const top = 50;
@@ -59,17 +61,32 @@ function App() {
     };
   }, [user]);
 
+  const fetchPosts = async () =>
+    await axios.get("/sync").then((response) => {
+      console.log(response);
+      setPosts(response.data);
+    });
+
   useEffect(() => {
-    // this is where the code runs
-    db.collection("posts")
-      .orderBy("timestamp", "desc")
-      .onSnapshot((snapshot) => {
-        // every time a new post is added, this code fires
-        setPosts(
-          snapshot.docs.map((doc) => ({ id: doc.id, post: doc.data() }))
-        );
-      });
+    const pusher = new Pusher("f235e422e8140b250bb8", {
+      cluster: "eu",
+    });
+
+    const channel = pusher.subscribe("posts");
+    channel.bind("inserted", (data) => {
+      console.log("data recieved", data);
+      fetchPosts();
+    });
+  });
+
+  useEffect(() => {
+    fetchPosts();
   }, []);
+
+  console.log("posts are >>>", posts);
+  posts.forEach((post) => {
+    console.log("post >>>>", post);
+  });
 
   const signUp = (event) => {
     event.preventDefault();
@@ -181,14 +198,14 @@ function App() {
 
       <div className="app__posts">
         <div className="app_">
-          {posts.map(({ id, post }) => (
+          {posts.map((post) => (
             <Post
-              key={id}
-              postId={id}
+              key={post._id}
+              postId={post._id}
               user={user}
-              username={post.username}
+              username={post.user}
               caption={post.caption}
-              imageUrl={post.imageUrl}
+              imageUrl={post.image}
             />
           ))}
         </div>
